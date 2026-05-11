@@ -11,7 +11,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/', getInventory);
-router.get('/:base/:asset', getInventoryByBaseAndAsset);
 router.get('/report/summary', authorize('Admin'), getInventoryReport);
+router.get('/:base/:asset', getInventoryByBaseAndAsset);
 
 export default router;

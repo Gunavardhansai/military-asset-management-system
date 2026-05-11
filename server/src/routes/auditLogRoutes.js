@@ -7,8 +7,8 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/', authorize('Admin'), getAuditLogs);
-router.get('/:id', authorize('Admin'), getAuditLogById);
-router.get('/user/:userId/activity', authorize('Admin'), getUserActivityReport);
 router.get('/report/summary', authorize('Admin'), getActionSummary);
+router.get('/user/:userId/activity', authorize('Admin'), getUserActivityReport);
+router.get('/:id', authorize('Admin'), getAuditLogById);
 
 export default router;
