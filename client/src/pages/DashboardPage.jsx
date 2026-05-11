@@ -1,17 +1,38 @@
 import { useEffect, useState } from 'react';
 import { dashboardService } from '../services/index.js';
 import { showToast } from '../utils/toast.js';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import {
+  ArrowDownUp,
+  Boxes,
+  PackageCheck,
+  ShieldAlert,
+  TrendingUp,
+} from 'lucide-react';
 
-const StatCard = ({ title, value, icon: Icon, color }) => (
-  <div className="bg-white rounded-lg shadow p-6 border-l-4" style={{ borderColor: color }}>
-    <div className="flex items-center justify-between">
+const StatCard = ({ title, value, icon: Icon, tone }) => (
+  <div className="command-surface rounded-lg p-5">
+    <div className="flex items-start justify-between gap-4">
       <div>
-        <p className="text-gray-600 text-sm font-medium">{title}</p>
-        <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+        <p className="text-sm font-semibold text-slate-500">{title}</p>
+        <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+          {value}
+        </p>
       </div>
-      <div className={`p-3 rounded-full`} style={{ backgroundColor: `${color}20` }}>
-        <Icon className="w-6 h-6" style={{ color }} />
+      <div className={`rounded-md p-3 ${tone}`}>
+        <Icon className="h-5 w-5" />
       </div>
     </div>
   </div>
@@ -47,54 +68,68 @@ export const DashboardPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-military-600"></div>
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-stone-200 border-b-emerald-700" />
       </div>
     );
   }
 
-  const COLORS = ['#438aab', '#3c7a9a', '#2d5d77', '#1e4054'];
+  const COLORS = ['#047857', '#b45309', '#334155', '#0f766e'];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-800">
+            Command Overview
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+            Dashboard
+          </h1>
+        </div>
+        <div className="rounded-md border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+          Live inventory telemetry
+        </div>
+      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Opening Balance"
           value={stats?.openingBalance || 0}
-          icon={() => <span>📊</span>}
-          color="#438aab"
+          icon={Boxes}
+          tone="bg-emerald-50 text-emerald-800"
         />
         <StatCard
           title="Closing Balance"
           value={stats?.closingBalance || 0}
-          icon={() => <span>📈</span>}
-          color="#3c7a9a"
+          icon={PackageCheck}
+          tone="bg-amber-50 text-amber-800"
         />
         <StatCard
           title="Net Movement"
           value={stats?.netMovement || 0}
-          icon={() => <span>🔄</span>}
-          color="#2d5d77"
+          icon={ArrowDownUp}
+          tone="bg-slate-100 text-slate-800"
         />
         <StatCard
           title="Total Expended"
           value={stats?.expenditures || 0}
-          icon={() => <span>🗑️</span>}
-          color="#1e4054"
+          icon={ShieldAlert}
+          tone="bg-red-50 text-red-800"
         />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Movement Chart */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Movement</h2>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="command-surface rounded-lg p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-950">
+              Monthly Movement
+            </h2>
+            <TrendingUp className="h-5 w-5 text-emerald-700" />
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid stroke="#e7e5e4" strokeDasharray="3 3" />
               <XAxis dataKey="_id.month" />
               <YAxis />
               <Tooltip />
@@ -102,16 +137,17 @@ export const DashboardPage = () => {
               <Line
                 type="monotone"
                 dataKey="purchases"
-                stroke="#438aab"
-                strokeWidth={2}
+                stroke="#047857"
+                strokeWidth={3}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Asset Distribution Chart */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Asset Distribution</h2>
+        <div className="command-surface rounded-lg p-6">
+          <h2 className="mb-4 text-lg font-semibold text-slate-950">
+            Asset Distribution
+          </h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -120,8 +156,8 @@ export const DashboardPage = () => {
                 cy="50%"
                 labelLine={false}
                 label={({ _id, total }) => `${_id}: ${total}`}
-                outerRadius={80}
-                fill="#8884d8"
+                outerRadius={82}
+                fill="#047857"
                 dataKey="total"
               >
                 {distributionData.map((entry, index) => (

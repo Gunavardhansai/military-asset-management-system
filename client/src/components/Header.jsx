@@ -1,4 +1,4 @@
-import { Menu, LogOut, User, Settings } from 'lucide-react';
+import { Menu, LogOut, User, Settings, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { Link } from 'react-router-dom';
@@ -13,53 +13,73 @@ export const Header = ({ onMenuClick }) => {
   };
 
   return (
-    <header className="bg-military-900 text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-4">
+    <header className="border-b border-slate-800 bg-slate-950 text-white shadow-sm">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-3">
             <button
               onClick={onMenuClick}
-              className="p-2 rounded-md hover:bg-military-800 transition"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-200 transition hover:bg-white/10 md:hidden"
+              aria-label="Open navigation"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-xl font-bold">Military Asset Manager</h1>
+            <div className="hidden h-10 w-10 items-center justify-center rounded-md bg-emerald-700 text-white md:flex">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                Command Ledger
+              </p>
+              <h1 className="text-base font-bold leading-tight tracking-tight sm:text-lg">
+                Military Asset Manager
+              </h1>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 relative">
+          <div className="relative flex items-center gap-3">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-military-800 transition"
+              className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm transition hover:bg-white/10"
             >
-              <User className="w-5 h-5" />
-              <span>{user?.fullName || 'User'}</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-xs font-bold">
+                {(user?.fullName || 'U').slice(0, 1)}
+              </span>
+              <span className="hidden text-left sm:block">
+                <span className="block font-semibold leading-none">
+                  {user?.fullName || 'User'}
+                </span>
+                <span className="mt-1 block text-xs text-slate-300">
+                  {user?.role || 'Authenticated'}
+                </span>
+              </span>
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-14 bg-white text-gray-900 rounded-md shadow-lg z-50 min-w-48">
-                <div className="px-4 py-2 border-b border-gray-200">
+              <div className="absolute right-0 top-14 z-50 min-w-56 overflow-hidden rounded-lg border border-stone-200 bg-white text-slate-950 shadow-xl shadow-slate-900/10">
+                <div className="border-b border-stone-200 px-4 py-3">
                   <p className="font-semibold">{user?.fullName}</p>
-                  <p className="text-sm text-gray-600">{user?.role}</p>
+                  <p className="text-sm text-slate-500">{user?.role}</p>
                 </div>
                 <Link
                   to="/profile"
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-stone-50"
                 >
-                  <User className="w-4 h-4" />
+                  <User className="h-4 w-4" />
                   Profile
                 </Link>
                 <Link
                   to="/settings"
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-stone-50"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="h-4 w-4" />
                   Settings
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-4 py-2 hover:bg-red-50 text-red-600"
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="h-4 w-4" />
                   Logout
                 </button>
               </div>
