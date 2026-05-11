@@ -1,0 +1,19 @@
+{
+  "name": "military-asset-management-system",
+  "version": "1.0.0",
+  "description": "Complete Military Asset Management System - MERN Stack",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
+    "build": "npm run build --workspace=server && npm run build --workspace=client",
+    "start": "npm start --workspace=server",
+    "install-all": "npm install && npm install --workspace=server && npm install --workspace=client"
+  },
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

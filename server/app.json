@@ -1,0 +1,35 @@
+{
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": {
+      "description": "MongoDB Atlas connection string",
+      "required": true
+    },
+    "JWT_SECRET": {
+      "description": "JWT secret key",
+      "required": true
+    },
+    "CLIENT_URL": {
+      "description": "Frontend URL",
+      "value": "https://your-frontend-url.vercel.app"
+    },
+    "NODE_ENV": {
+      "description": "Environment",
+      "value": "production"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "name": "military-asset-manager",
+  "scripts": {
+    "postdeploy": "npm run seed"
+  }
+}

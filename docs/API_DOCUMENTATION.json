@@ -1,0 +1,278 @@
+{
+  "name": "Military Asset Management API",
+  "version": "1.0.0",
+  "description": "Production-ready Military Asset Management System API",
+  "baseUrl": "http://localhost:5000/api/v1",
+  "apiVersion": "v1",
+  "documentation": {
+    "overview": "Complete REST API for military asset management across bases",
+    "authentication": "JWT Bearer tokens",
+    "formats": ["JSON"],
+    "https": true
+  },
+  "endpoints": {
+    "authentication": {
+      "login": {
+        "method": "POST",
+        "path": "/auth/login",
+        "description": "User login",
+        "auth_required": false,
+        "body": {
+          "email": "string (email)",
+          "password": "string (min 6 chars)"
+        }
+      },
+      "register": {
+        "method": "POST",
+        "path": "/auth/register",
+        "description": "User registration",
+        "auth_required": false,
+        "body": {
+          "fullName": "string",
+          "email": "string (email)",
+          "password": "string (min 6 chars)",
+          "role": "string (Admin|Base Commander|Logistics Officer)",
+          "base": "string (ObjectId, required if not Admin)"
+        }
+      },
+      "logout": {
+        "method": "POST",
+        "path": "/auth/logout",
+        "description": "User logout",
+        "auth_required": true
+      },
+      "getMe": {
+        "method": "GET",
+        "path": "/auth/me",
+        "description": "Get current user profile",
+        "auth_required": true
+      }
+    },
+    "purchases": {
+      "create": {
+        "method": "POST",
+        "path": "/purchases",
+        "description": "Create new purchase",
+        "auth_required": true,
+        "roles": ["Admin", "Logistics Officer"],
+        "body": {
+          "asset": "ObjectId (required)",
+          "base": "ObjectId (required)",
+          "quantity": "number (min 1)",
+          "unitCost": "number (min 0)",
+          "supplier": "string (required)",
+          "purchaseDate": "ISO date (required)",
+          "invoiceNo": "string",
+          "notes": "string"
+        }
+      },
+      "getAll": {
+        "method": "GET",
+        "path": "/purchases",
+        "description": "Get all purchases",
+        "auth_required": true,
+        "query_params": {
+          "page": "number (default 1)",
+          "limit": "number (default 10)",
+          "base": "ObjectId",
+          "asset": "ObjectId",
+          "startDate": "ISO date",
+          "endDate": "ISO date"
+        }
+      },
+      "getById": {
+        "method": "GET",
+        "path": "/purchases/:id",
+        "description": "Get purchase by ID",
+        "auth_required": true
+      },
+      "update": {
+        "method": "PUT",
+        "path": "/purchases/:id",
+        "description": "Update purchase",
+        "auth_required": true,
+        "roles": ["Admin", "Logistics Officer"]
+      },
+      "delete": {
+        "method": "DELETE",
+        "path": "/purchases/:id",
+        "description": "Delete purchase (Admin only)",
+        "auth_required": true,
+        "roles": ["Admin"]
+      }
+    },
+    "transfers": {
+      "create": {
+        "method": "POST",
+        "path": "/transfers",
+        "description": "Create new transfer",
+        "auth_required": true,
+        "roles": ["Admin", "Logistics Officer"],
+        "body": {
+          "asset": "ObjectId (required)",
+          "fromBase": "ObjectId (required)",
+          "toBase": "ObjectId (required)",
+          "quantity": "number (min 1, required)",
+          "transferDate": "ISO date (required)",
+          "notes": "string"
+        }
+      },
+      "getAll": {
+        "method": "GET",
+        "path": "/transfers",
+        "description": "Get all transfers",
+        "auth_required": true,
+        "query_params": {
+          "page": "number",
+          "limit": "number",
+          "fromBase": "ObjectId",
+          "toBase": "ObjectId",
+          "status": "string (Pending|In Transit|Received|Cancelled)",
+          "startDate": "ISO date",
+          "endDate": "ISO date"
+        }
+      },
+      "approve": {
+        "method": "PATCH",
+        "path": "/transfers/:id/approve",
+        "description": "Approve transfer",
+        "auth_required": true,
+        "roles": ["Admin", "Base Commander"]
+      },
+      "receive": {
+        "method": "PATCH",
+        "path": "/transfers/:id/receive",
+        "description": "Mark transfer as received",
+        "auth_required": true,
+        "roles": ["Admin", "Base Commander"]
+      },
+      "cancel": {
+        "method": "PATCH",
+        "path": "/transfers/:id/cancel",
+        "description": "Cancel transfer",
+        "auth_required": true,
+        "roles": ["Admin"]
+      }
+    },
+    "dashboard": {
+      "stats": {
+        "method": "GET",
+        "path": "/dashboard/stats",
+        "description": "Get dashboard statistics",
+        "auth_required": true,
+        "query_params": {
+          "base": "ObjectId",
+          "startDate": "ISO date",
+          "endDate": "ISO date"
+        },
+        "response": {
+          "openingBalance": "number",
+          "closingBalance": "number",
+          "netMovement": "number",
+          "purchases": "object",
+          "transferIn": "number",
+          "transferOut": "number",
+          "assignments": "number",
+          "expenditures": "number"
+        }
+      },
+      "monthlyMovement": {
+        "method": "GET",
+        "path": "/dashboard/monthly-movement",
+        "description": "Get monthly asset movement data",
+        "auth_required": true
+      },
+      "assetDistribution": {
+        "method": "GET",
+        "path": "/dashboard/asset-distribution",
+        "description": "Get asset distribution by category",
+        "auth_required": true
+      }
+    },
+    "auditLogs": {
+      "getAll": {
+        "method": "GET",
+        "path": "/audit-logs",
+        "description": "Get audit logs (Admin only)",
+        "auth_required": true,
+        "roles": ["Admin"],
+        "query_params": {
+          "page": "number",
+          "limit": "number",
+          "action": "string",
+          "resource": "string",
+          "user": "ObjectId",
+          "startDate": "ISO date",
+          "endDate": "ISO date"
+        }
+      }
+    },
+    "users": {
+      "create": {
+        "method": "POST",
+        "path": "/users",
+        "description": "Create new user (Admin only)",
+        "auth_required": true,
+        "roles": ["Admin"]
+      },
+      "getAll": {
+        "method": "GET",
+        "path": "/users",
+        "description": "Get all users (Admin only)",
+        "auth_required": true,
+        "roles": ["Admin"]
+      },
+      "update": {
+        "method": "PUT",
+        "path": "/users/:id",
+        "description": "Update user (Admin only)",
+        "auth_required": true,
+        "roles": ["Admin"]
+      },
+      "delete": {
+        "method": "DELETE",
+        "path": "/users/:id",
+        "description": "Delete user (Admin only)",
+        "auth_required": true,
+        "roles": ["Admin"]
+      }
+    },
+    "inventory": {
+      "getAll": {
+        "method": "GET",
+        "path": "/inventory",
+        "description": "Get inventory",
+        "auth_required": true,
+        "query_params": {
+          "page": "number",
+          "limit": "number",
+          "base": "ObjectId",
+          "asset": "ObjectId"
+        }
+      },
+      "getByBaseAndAsset": {
+        "method": "GET",
+        "path": "/inventory/:base/:asset",
+        "description": "Get specific inventory record",
+        "auth_required": true
+      }
+    }
+  },
+  "errorCodes": {
+    "200": "Success",
+    "201": "Created",
+    "400": "Bad Request",
+    "401": "Unauthorized",
+    "403": "Forbidden",
+    "404": "Not Found",
+    "409": "Conflict (Duplicate)",
+    "500": "Internal Server Error"
+  },
+  "authentication": {
+    "type": "Bearer Token",
+    "header": "Authorization",
+    "format": "Bearer <token>",
+    "token_expiry": "7 days",
+    "refresh_token_expiry": "30 days"
+  }
+}
