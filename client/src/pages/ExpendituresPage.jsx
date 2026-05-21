@@ -5,17 +5,41 @@ import {
   ClipboardList,
   Flame,
   PackageMinus,
+  Plus,
   Search,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { expenditureService } from '../services/index.js';
+import {
+  assetService,
+  baseService,
+  expenditureService,
+} from '../services/index.js';
 import { showToast } from '../utils/toast.js';
+
+const today = new Date().toISOString().slice(0, 10);
 
 const getBaseId = (base) => {
   if (!base) return '';
   if (typeof base === 'string') return base;
   return base._id || base.id || '';
 };
+
+const getBaseName = (base) => {
+  if (!base) return 'Assigned Base';
+  if (typeof base === 'string') return 'Assigned Base';
+  return base.name || 'Assigned Base';
+};
+
+const createEmptyForm = (base = '') => ({
+  asset: '',
+  base,
+  quantity: 1,
+  reason: 'Usage',
+  expenditureDate: today,
+  description: '',
+  notes: '',
+});
 
 const reasonTone = {
   Usage: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
@@ -43,18 +67,47 @@ const SummaryCard = ({ label, value, icon: Icon, tone }) => (
 
 export const ExpendituresPage = () => {
   const { user } = useAuth();
+  const commanderBaseId = getBaseId(user?.base);
+  const isBaseCommander = user?.role === 'Base Commander';
   const [expenditures, setExpenditures] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [bases, setBases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [reason, setReason] = useState('');
+  const [form, setForm] = useState(() => createEmptyForm(commanderBaseId));
+
+  const visibleBases = useMemo(() => {
+    if (!isBaseCommander) return bases;
+
+    const assignedBase = bases.find((base) => base._id === commanderBaseId);
+    return assignedBase
+      ? [assignedBase]
+      : [{ _id: commanderBaseId, name: getBaseName(user?.base), code: '' }].filter((base) => base._id);
+  }, [bases, commanderBaseId, isBaseCommander, user?.base]);
+
+  const fetchOptions = async () => {
+    try {
+      const [assetResponse, baseResponse] = await Promise.all([
+        assetService.getAll({ limit: 100 }),
+        baseService.getAll({ limit: 100 }),
+      ]);
+      setAssets(assetResponse.data.data || []);
+      setBases(baseResponse.data.data || []);
+    } catch (error) {
+      showToast.error('Failed to load expenditure form options');
+    }
+  };
 
   const fetchExpenditures = async () => {
     setLoading(true);
     try {
       const params = { page, limit: 10 };
       if (reason) params.reason = reason;
-      if (user?.role === 'Base Commander') params.base = getBaseId(user.base);
+      if (isBaseCommander) params.base = commanderBaseId;
 
       const response = await expenditureService.getAll(params);
       setExpenditures(response.data.data || []);
@@ -68,7 +121,17 @@ export const ExpendituresPage = () => {
 
   useEffect(() => {
     fetchExpenditures();
-  }, [page, reason, user?.role, user?.base]);
+  }, [page, reason, isBaseCommander, commanderBaseId]);
+
+  useEffect(() => {
+    fetchOptions();
+  }, []);
+
+  useEffect(() => {
+    if (isBaseCommander && commanderBaseId) {
+      setForm((current) => ({ ...current, base: commanderBaseId }));
+    }
+  }, [commanderBaseId, isBaseCommander]);
 
   const summary = useMemo(() => {
     return expenditures.reduce(
@@ -82,6 +145,39 @@ export const ExpendituresPage = () => {
     );
   }, [expenditures]);
 
+  const updateForm = (name, value) => {
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const resetForm = () => {
+    setForm(createEmptyForm(isBaseCommander ? commanderBaseId : ''));
+  };
+
+  const handleCreate = async (event) => {
+    event.preventDefault();
+
+    if (!form.asset || !form.base) {
+      showToast.error('Please select an asset and base');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await expenditureService.create({
+        ...form,
+        quantity: Number(form.quantity),
+      });
+      showToast.success('Expenditure added successfully');
+      setShowForm(false);
+      resetForm();
+      fetchExpenditures();
+    } catch (error) {
+      showToast.error(error.response?.data?.message || 'Failed to add expenditure');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -93,11 +189,130 @@ export const ExpendituresPage = () => {
             Expenditures
           </h1>
         </div>
-        <div className="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-slate-600">
-          <Search className="h-4 w-4 text-emerald-700" />
-          {total} records
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-slate-600">
+            <Search className="h-4 w-4 text-emerald-700" />
+            {total} records
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowForm((current) => !current)}
+            className="primary-button"
+          >
+            {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {showForm ? 'Close' : 'Add Expenditure'}
+          </button>
         </div>
       </div>
+
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <label className="space-y-2">
+              <span className="field-label">Asset</span>
+              <select
+                required
+                value={form.asset}
+                onChange={(event) => updateForm('asset', event.target.value)}
+                className="field-input"
+              >
+                <option value="">Select asset</option>
+                {assets.map((asset) => (
+                  <option key={asset._id} value={asset._id}>
+                    {asset.name} ({asset.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="field-label">Base</span>
+              <select
+                required
+                value={form.base}
+                disabled={isBaseCommander}
+                onChange={(event) => updateForm('base', event.target.value)}
+                className="field-input disabled:bg-stone-100"
+              >
+                <option value="">Select base</option>
+                {visibleBases.map((base) => (
+                  <option key={base._id} value={base._id}>
+                    {base.name} {base.code ? `(${base.code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="field-label">Quantity</span>
+              <input
+                required
+                min="1"
+                type="number"
+                value={form.quantity}
+                onChange={(event) => updateForm('quantity', event.target.value)}
+                className="field-input"
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="field-label">Reason</span>
+              <select
+                required
+                value={form.reason}
+                onChange={(event) => updateForm('reason', event.target.value)}
+                className="field-input"
+              >
+                <option value="Usage">Usage</option>
+                <option value="Loss">Loss</option>
+                <option value="Damage">Damage</option>
+                <option value="Obsolete">Obsolete</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="field-label">Date</span>
+              <input
+                required
+                type="date"
+                value={form.expenditureDate}
+                onChange={(event) => updateForm('expenditureDate', event.target.value)}
+                className="field-input"
+              />
+            </label>
+
+            <label className="space-y-2 md:col-span-2">
+              <span className="field-label">Description</span>
+              <input
+                value={form.description}
+                onChange={(event) => updateForm('description', event.target.value)}
+                className="field-input"
+                placeholder="Optional"
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="field-label">Notes</span>
+              <input
+                value={form.notes}
+                onChange={(event) => updateForm('notes', event.target.value)}
+                className="field-input"
+                placeholder="Optional"
+              />
+            </label>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button type="submit" disabled={saving} className="primary-button">
+              <Plus className="h-4 w-4" />
+              {saving ? 'Saving' : 'Add Expenditure'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         <SummaryCard

@@ -3,11 +3,21 @@ import Transfer from '../models/Transfer.js';
 import Assignment from '../models/Assignment.js';
 import Expenditure from '../models/Expenditure.js';
 import Inventory from '../models/Inventory.js';
+import { getAssignedBaseId, isBaseCommander } from '../utils/accessControl.js';
 import logger from '../config/logger.js';
+import mongoose from 'mongoose';
+
+const toObjectId = (id) =>
+  id && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+
+const getScopedBase = (req, requestedBase) =>
+  isBaseCommander(req) ? getAssignedBaseId(req) || '000000000000000000000000' : requestedBase;
 
 export const getDashboardStats = async (req, res, next) => {
   try {
     const { base, startDate, endDate } = req.query;
+    const scopedBase = getScopedBase(req, base);
+    const scopedBaseId = toObjectId(scopedBase);
 
     const dateFilter = {};
     if (startDate || endDate) {
@@ -15,13 +25,8 @@ export const getDashboardStats = async (req, res, next) => {
       dateFilter.$lte = endDate ? new Date(endDate) : new Date();
     }
 
-    // Build query based on user role
     const query = {};
-    if (req.user.role === 'Base Commander' && req.user.base) {
-      query.base = req.user.base;
-    } else if (base) {
-      query.base = base;
-    }
+    if (scopedBaseId) query.base = scopedBaseId;
 
     // Get total purchases
     const purchasesQuery = { ...query };
@@ -34,19 +39,19 @@ export const getDashboardStats = async (req, res, next) => {
     ]);
 
     // Get transfers in and out
-    const transferQuery = { ...query };
+    const transferQuery = {};
     if (Object.keys(dateFilter).length > 0) {
       transferQuery.transferDate = dateFilter;
     }
     transferQuery.status = { $ne: 'Cancelled' };
 
     const transferIn = await Transfer.aggregate([
-      { $match: { ...transferQuery, toBase: query.base } },
+      { $match: scopedBaseId ? { ...transferQuery, toBase: scopedBaseId } : transferQuery },
       { $group: { _id: null, total: { $sum: '$quantity' } } },
     ]);
 
     const transferOut = await Transfer.aggregate([
-      { $match: { ...transferQuery, fromBase: query.base } },
+      { $match: scopedBaseId ? { ...transferQuery, fromBase: scopedBaseId } : transferQuery },
       { $group: { _id: null, total: { $sum: '$quantity' } } },
     ]);
 
@@ -108,9 +113,10 @@ export const getDashboardStats = async (req, res, next) => {
 export const getMonthlyMovement = async (req, res, next) => {
   try {
     const { base, months = 6 } = req.query;
+    const scopedBase = getScopedBase(req, base);
 
     const query = {};
-    if (base) query.base = base;
+    if (scopedBase) query.base = toObjectId(scopedBase);
 
     const monthlyData = await Purchase.aggregate([
       {
@@ -149,9 +155,10 @@ export const getMonthlyMovement = async (req, res, next) => {
 export const getAssetDistribution = async (req, res, next) => {
   try {
     const { base } = req.query;
+    const scopedBase = getScopedBase(req, base);
 
-    const query = { base };
-    if (!base) {
+    const query = { base: toObjectId(scopedBase) };
+    if (!scopedBase) {
       delete query.base;
     }
 
@@ -193,13 +200,14 @@ export const getAssetDistribution = async (req, res, next) => {
 export const getNetMovement = async (req, res, next) => {
   try {
     const { base, startDate, endDate } = req.query;
+    const scopedBase = getScopedBase(req, base);
 
     const dateFilter = {};
     if (startDate) dateFilter.$gte = new Date(startDate);
     if (endDate) dateFilter.$lte = new Date(endDate);
 
     // Get purchases
-    const purchaseQuery = base ? { base } : {};
+    const purchaseQuery = scopedBase ? { base: scopedBase } : {};
     if (Object.keys(dateFilter).length > 0) {
       purchaseQuery.purchaseDate = dateFilter;
     }
@@ -207,7 +215,7 @@ export const getNetMovement = async (req, res, next) => {
     const purchases = await Purchase.find(purchaseQuery).populate('asset', 'name code category');
 
     // Get transfers in
-    const transferInQuery = base ? { toBase: base } : {};
+    const transferInQuery = scopedBase ? { toBase: scopedBase } : {};
     if (Object.keys(dateFilter).length > 0) {
       transferInQuery.transferDate = dateFilter;
     }
@@ -216,7 +224,7 @@ export const getNetMovement = async (req, res, next) => {
     const transfersIn = await Transfer.find(transferInQuery).populate('asset', 'name code category');
 
     // Get transfers out
-    const transferOutQuery = base ? { fromBase: base } : {};
+    const transferOutQuery = scopedBase ? { fromBase: scopedBase } : {};
     if (Object.keys(dateFilter).length > 0) {
       transferOutQuery.transferDate = dateFilter;
     }

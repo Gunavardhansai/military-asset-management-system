@@ -14,7 +14,7 @@ const router = express.Router();
 
 router.use(protect);
 
-router.post('/', validateTransfer, handleValidationErrors, authorize('Admin', 'Logistics Officer'), createTransfer);
+router.post('/', validateTransfer, handleValidationErrors, authorize('Admin', 'Logistics Officer', 'Base Commander'), createTransfer);
 router.get('/', getTransfers);
 router.get('/:id', getTransferById);
 router.patch('/:id/approve', authorize('Admin', 'Base Commander'), approveTransfer);

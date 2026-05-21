@@ -1,12 +1,28 @@
 import Transfer from '../models/Transfer.js';
 import Inventory from '../models/Inventory.js';
 import { createAuditLog } from '../middleware/auditLogger.js';
+import {
+  applyTransferScope,
+  ensureBaseAccess,
+  ensureTransferAccess,
+} from '../utils/accessControl.js';
 import { updateInventory } from '../utils/inventory.js';
 import logger from '../config/logger.js';
 
 export const createTransfer = async (req, res, next) => {
   try {
     const { asset, fromBase, toBase, quantity, transferDate, notes } = req.body;
+
+    if (String(fromBase) === String(toBase)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Source and destination bases must be different',
+      });
+    }
+
+    if (!ensureBaseAccess(req, res, fromBase, 'Base Commanders can only create transfers from their assigned base')) {
+      return;
+    }
 
     // Check inventory availability
     const inventory = await Inventory.findOne({
@@ -56,6 +72,7 @@ export const getTransfers = async (req, res, next) => {
     if (fromBase) query.fromBase = fromBase;
     if (toBase) query.toBase = toBase;
     if (status) query.status = status;
+    applyTransferScope(req, query);
 
     if (startDate || endDate) {
       query.transferDate = {};
@@ -112,6 +129,10 @@ export const getTransferById = async (req, res, next) => {
       });
     }
 
+    if (!ensureTransferAccess(req, res, transfer)) {
+      return;
+    }
+
     res.status(200).json({
       success: true,
       data: transfer,
@@ -134,6 +155,10 @@ export const approveTransfer = async (req, res, next) => {
         success: false,
         message: 'Transfer not found',
       });
+    }
+
+    if (!ensureBaseAccess(req, res, transfer.fromBase, 'Base Commanders can only approve transfers from their assigned base')) {
+      return;
     }
 
     if (transfer.status !== 'Pending') {
@@ -190,6 +215,10 @@ export const receiveTransfer = async (req, res, next) => {
       });
     }
 
+    if (!ensureBaseAccess(req, res, transfer.toBase, 'Base Commanders can only receive transfers for their assigned base')) {
+      return;
+    }
+
     if (transfer.status !== 'In Transit') {
       return res.status(400).json({
         success: false,
@@ -239,6 +268,10 @@ export const cancelTransfer = async (req, res, next) => {
         success: false,
         message: 'Transfer not found',
       });
+    }
+
+    if (!ensureTransferAccess(req, res, transfer)) {
+      return;
     }
 
     if (transfer.status === 'Received' || transfer.status === 'Cancelled') {

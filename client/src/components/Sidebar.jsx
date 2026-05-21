@@ -14,8 +14,8 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Base Commander', 'Logistics Officer'] },
-  { path: '/purchases', label: 'Purchases', icon: ShoppingCart, roles: ['Admin', 'Logistics Officer'] },
-  { path: '/transfers', label: 'Transfers', icon: ArrowRightLeft, roles: ['Admin', 'Logistics Officer'] },
+  { path: '/purchases', label: 'Purchases', icon: ShoppingCart, roles: ['Admin', 'Logistics Officer', 'Base Commander'] },
+  { path: '/transfers', label: 'Transfers', icon: ArrowRightLeft, roles: ['Admin', 'Logistics Officer', 'Base Commander'] },
   { path: '/assignments', label: 'Assignments', icon: Users, roles: ['Admin', 'Base Commander'] },
   { path: '/expenditures', label: 'Expenditures', icon: Trash2, roles: ['Admin', 'Base Commander'] },
   { path: '/inventory', label: 'Inventory', icon: PackageCheck, roles: ['Admin', 'Base Commander', 'Logistics Officer'] },

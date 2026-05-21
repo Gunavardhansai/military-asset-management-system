@@ -1,11 +1,25 @@
 import Expenditure from '../models/Expenditure.js';
+import Inventory from '../models/Inventory.js';
 import { createAuditLog } from '../middleware/auditLogger.js';
+import { applyBaseScope, ensureBaseAccess } from '../utils/accessControl.js';
 import { updateInventory } from '../utils/inventory.js';
 import logger from '../config/logger.js';
 
 export const createExpenditure = async (req, res, next) => {
   try {
     const { asset, base, quantity, reason, expenditureDate, description, notes } = req.body;
+
+    if (!ensureBaseAccess(req, res, base, 'Base Commanders can only expend assets from their assigned base')) {
+      return;
+    }
+
+    const inventory = await Inventory.findOne({ asset, base });
+    if (!inventory || inventory.closingBalance < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient inventory for expenditure',
+      });
+    }
 
     const expenditure = await Expenditure.create({
       asset,
@@ -46,6 +60,7 @@ export const getExpenditures = async (req, res, next) => {
     if (base) query.base = base;
     if (asset) query.asset = asset;
     if (reason) query.reason = reason;
+    applyBaseScope(req, query);
 
     if (startDate || endDate) {
       query.expenditureDate = {};
@@ -100,6 +115,10 @@ export const getExpenditureById = async (req, res, next) => {
       });
     }
 
+    if (!ensureBaseAccess(req, res, expenditure.base)) {
+      return;
+    }
+
     res.status(200).json({
       success: true,
       data: expenditure,
@@ -126,8 +145,22 @@ export const updateExpenditure = async (req, res, next) => {
       });
     }
 
+    if (!ensureBaseAccess(req, res, expenditure.base, 'Base Commanders can only update expenditures for their assigned base')) {
+      return;
+    }
+
     const oldData = expenditure.toObject();
     const quantityDifference = quantity - expenditure.quantity;
+
+    if (quantityDifference > 0) {
+      const inventory = await Inventory.findOne({ asset: expenditure.asset, base: expenditure.base });
+      if (!inventory || inventory.closingBalance < quantityDifference) {
+        return res.status(400).json({
+          success: false,
+          message: 'Insufficient inventory for expenditure update',
+        });
+      }
+    }
 
     expenditure.quantity = quantity || expenditure.quantity;
     expenditure.reason = reason || expenditure.reason;
@@ -176,6 +209,10 @@ export const deleteExpenditure = async (req, res, next) => {
         success: false,
         message: 'Expenditure not found',
       });
+    }
+
+    if (!ensureBaseAccess(req, res, expenditure.base)) {
+      return;
     }
 
     // Only Admin can delete

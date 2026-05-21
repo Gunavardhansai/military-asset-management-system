@@ -13,10 +13,10 @@ const router = express.Router();
 
 router.use(protect);
 
-router.post('/', validatePurchase, handleValidationErrors, authorize('Admin', 'Logistics Officer'), createPurchase);
+router.post('/', validatePurchase, handleValidationErrors, authorize('Admin', 'Logistics Officer', 'Base Commander'), createPurchase);
 router.get('/', getPurchases);
 router.get('/:id', getPurchaseById);
-router.put('/:id', validatePurchase, handleValidationErrors, authorize('Admin', 'Logistics Officer'), updatePurchase);
+router.put('/:id', validatePurchase, handleValidationErrors, authorize('Admin', 'Logistics Officer', 'Base Commander'), updatePurchase);
 router.delete('/:id', authorize('Admin'), deletePurchase);
 
 export default router;

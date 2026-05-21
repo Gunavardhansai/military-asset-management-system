@@ -2,6 +2,7 @@ import Purchase from '../models/Purchase.js';
 import Asset from '../models/Asset.js';
 import Base from '../models/Base.js';
 import { createAuditLog } from '../middleware/auditLogger.js';
+import { applyBaseScope, ensureBaseAccess } from '../utils/accessControl.js';
 import { updateInventory } from '../utils/inventory.js';
 import logger from '../config/logger.js';
 
@@ -18,6 +19,10 @@ export const createPurchase = async (req, res, next) => {
         success: false,
         message: 'Invalid asset or base ID',
       });
+    }
+
+    if (!ensureBaseAccess(req, res, base, 'Base Commanders can only create purchases for their assigned base')) {
+      return;
     }
 
     const purchase = await Purchase.create({
@@ -59,6 +64,7 @@ export const getPurchases = async (req, res, next) => {
     const query = {};
     if (base) query.base = base;
     if (asset) query.asset = asset;
+    applyBaseScope(req, query);
 
     if (startDate || endDate) {
       query.purchaseDate = {};
@@ -111,6 +117,10 @@ export const getPurchaseById = async (req, res, next) => {
       });
     }
 
+    if (!ensureBaseAccess(req, res, purchase.base)) {
+      return;
+    }
+
     res.status(200).json({
       success: true,
       data: purchase,
@@ -135,6 +145,10 @@ export const updatePurchase = async (req, res, next) => {
         success: false,
         message: 'Purchase not found',
       });
+    }
+
+    if (!ensureBaseAccess(req, res, purchase.base, 'Base Commanders can only update purchases for their assigned base')) {
+      return;
     }
 
     const oldData = purchase.toObject();
@@ -191,6 +205,10 @@ export const deletePurchase = async (req, res, next) => {
         success: false,
         message: 'Purchase not found',
       });
+    }
+
+    if (!ensureBaseAccess(req, res, purchase.base)) {
+      return;
     }
 
     // Only Admin can delete

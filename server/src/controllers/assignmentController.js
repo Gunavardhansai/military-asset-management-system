@@ -1,11 +1,25 @@
 import Assignment from '../models/Assignment.js';
+import Inventory from '../models/Inventory.js';
 import { createAuditLog } from '../middleware/auditLogger.js';
+import { applyBaseScope, ensureBaseAccess } from '../utils/accessControl.js';
 import { updateInventory } from '../utils/inventory.js';
 import logger from '../config/logger.js';
 
 export const createAssignment = async (req, res, next) => {
   try {
     const { asset, base, personnelName, rank, quantity, assignedDate, notes } = req.body;
+
+    if (!ensureBaseAccess(req, res, base, 'Base Commanders can only assign assets from their assigned base')) {
+      return;
+    }
+
+    const inventory = await Inventory.findOne({ asset, base });
+    if (!inventory || inventory.closingBalance < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient inventory for assignment',
+      });
+    }
 
     const assignment = await Assignment.create({
       asset,
@@ -45,6 +59,7 @@ export const getAssignments = async (req, res, next) => {
     const query = {};
     if (base) query.base = base;
     if (status) query.status = status;
+    applyBaseScope(req, query);
 
     if (startDate || endDate) {
       query.assignedDate = {};
@@ -97,6 +112,10 @@ export const getAssignmentById = async (req, res, next) => {
       });
     }
 
+    if (!ensureBaseAccess(req, res, assignment.base)) {
+      return;
+    }
+
     res.status(200).json({
       success: true,
       data: assignment,
@@ -123,8 +142,22 @@ export const updateAssignment = async (req, res, next) => {
       });
     }
 
+    if (!ensureBaseAccess(req, res, assignment.base, 'Base Commanders can only update assignments for their assigned base')) {
+      return;
+    }
+
     const oldData = assignment.toObject();
     const quantityDifference = quantity - assignment.quantity;
+
+    if (quantityDifference > 0) {
+      const inventory = await Inventory.findOne({ asset: assignment.asset, base: assignment.base });
+      if (!inventory || inventory.closingBalance < quantityDifference) {
+        return res.status(400).json({
+          success: false,
+          message: 'Insufficient inventory for assignment update',
+        });
+      }
+    }
 
     assignment.quantity = quantity || assignment.quantity;
     assignment.personnelName = personnelName || assignment.personnelName;
@@ -172,6 +205,10 @@ export const returnAssignment = async (req, res, next) => {
         success: false,
         message: 'Assignment not found',
       });
+    }
+
+    if (!ensureBaseAccess(req, res, assignment.base, 'Base Commanders can only return assignments for their assigned base')) {
+      return;
     }
 
     if (assignment.status !== 'Active') {
@@ -225,6 +262,10 @@ export const deleteAssignment = async (req, res, next) => {
         success: false,
         message: 'Assignment not found',
       });
+    }
+
+    if (!ensureBaseAccess(req, res, assignment.base)) {
+      return;
     }
 
     // Only Admin can delete
